@@ -14,10 +14,39 @@ else:
 	print("without sympy")
 	import math as sympy
 
+propeller_attachments = {}
+propeller = []
+sections = []
+
+
 #alle mål er i micrometer ( 1/1000 millimeter )
 scale = 1
+
+
+#compressor sections
+section_height = 5*scale
+section_offset = 0*scale
+section_radius = 15*scale
+section_radius_increment = 1*scale
+section_blade_radius = 5*scale
+section_blade_radius_increment_ratio = 1.5
+sections_amount = 10
+
+
+
+#other
+compressor_height = sections_amount * section_height
+compressor_radius = (section_radius + 1 * scale) * scale
+compressor_thickness = 1*scale
+compressor_offset = 0*scale
+
+rod1_radius = 2.5*scale
+rod1_height = 10*scale
+rod1_offset = compressor_height + compressor_offset
+
 cylinder_radius = 5*scale
 cylinder_height = 10*scale
+cylinder_offset = rod1_offset + rod1_height
 
 blades = 4
 blade_radius = 50*scale
@@ -25,14 +54,12 @@ blade_thickness = 1*scale
 # blade_angles = [20,  45]
 blade_angles = [sympy.pi/9,  sympy.pi/4]
 
+duct_ratio = 2
 duct_gap = 1/10*scale
 duct_thickness = 1*scale
+duct_height = duct_ratio*cylinder_height
+duct_offset = cylinder_offset - cylinder_offset/duct_ratio/4
 
-rod_radius = 2.5*scale
-rod_height = 10*scale
-
-propeller_attachments = {}
-propeller = []
 
 def clss():
     os.system('cls' if os.name=='nt' else 'clear')
@@ -80,7 +107,7 @@ def rotate_vector(vector, angle):
 	return vector
 
 
-def make_cylinder(radius, height, offset=0, attachment_points = None):
+def make_cylinder(radius, height, offset=0, attachment_points = None, shape_function="radius"):
 	omkreds = 2*radius*math.pi
 	omkreds_rounded = math.ceil(omkreds)
 	triangles= omkreds_rounded*2
@@ -91,28 +118,30 @@ def make_cylinder(radius, height, offset=0, attachment_points = None):
 	isbetween, isbetween_temp = False, False
 
 	for u in range(height):
-		u = u+offset
+		radius1 = eval(shape_function) 
+		radius2 = eval(shape_function) 
+		u = u
 		for i in range(0, omkreds_rounded):
 			degree1 = 2*sympy.pi/omkreds*i
 			degree2 = 2*sympy.pi/omkreds*(i+1)
 			if i == omkreds_rounded-1:
 				degree2 = 0
 
-			x1 = radius*math.cos( degree1 )
-			y1 = radius*math.sin( degree1 )
-			z1 = u
+			x1 = radius1*math.cos( degree1 )
+			y1 = radius1*math.sin( degree1 )
+			z1 = u+offset
 
-			x2 = radius*math.cos( degree2 )
-			y2 = radius*math.sin( degree2 )
-			z2 = u
+			x2 = radius2*math.cos( degree2 )
+			y2 = radius2*math.sin( degree2 )
+			z2 = u+offset
 
 			x3 = x1
 			y3 = y1
-			z3 = u+1
+			z3 = u+1+offset
 
 			x4 = x2
 			y4 = y2
-			z4 = u+1
+			z4 = u+1+offset
 
 			vector = [
 						[x1, y1, z1],
@@ -293,7 +322,7 @@ def make_circle(radius1, radius2, offset=0, flip=0):
 
 	return data
 
-def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
+def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0):
 	# degree1 = math.radians(angle1)
 	# degree2 = math.radians(angle2)
 	# degree3 = math.radians(360/blades*prop)
@@ -311,11 +340,11 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
 			# radius1
 			y1 = (u+blade_thickness*t*2)*math.tan(degree1) 
 			x1 = sqrt(radius1**2 - y1**2) 
-			z1 = u
+			z1 = u+offset
 
 			y3 = (u+1+blade_thickness*t*2)*math.tan(degree1) 
 			x3 = sqrt( radius1**2 - y3**2) 
-			z3 = u+1
+			z3 = u+1+offset
 
 			# radius2
 			a = (u+blade_thickness*t)*math.tan(degree2)
@@ -323,14 +352,14 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
 
 			y2 = radius2*math.sin(A)
 			x2 = sqrt( radius2**2 - y2**2) 
-			z2 = u
+			z2 = u+offset
 
 			a = (u+1+blade_thickness*t)*math.tan(degree2)
 			A = math.asin(a/radius2)
 
 			y4 = radius2*math.sin(A) 
 			x4 = sqrt( radius2**2 - y4**2 )
-			z4 = u+1
+			z4 = u+1+offset
 
 			vector = [
 						[x1, y1, z1],
@@ -373,14 +402,14 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
 
 		y1 = radius2*math.sin(A)
 		x1 = sqrt( radius2**2 - y1**2) 
-		z1 = u
+		z1 = u+offset
 
 		a = (u+1+blade_thickness*0)*math.tan(degree2)
 		A = math.asin(a/radius2)
 
 		y3 = radius2*math.sin(A)
 		x3 = sqrt( radius2**2 - y3**2 )
-		z3 = u+1
+		z3 = u+1+offset
 
 
 		a = (u+blade_thickness*1)*math.tan(degree2)
@@ -388,14 +417,14 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
 
 		y2 = radius2*math.sin(A)
 		x2 = sqrt( radius2**2 - y2**2) 
-		z2 = u
+		z2 = u+offset
 
 		a = (u+1+blade_thickness*1)*math.tan(degree2)
 		A = math.asin(a/radius2)
 
 		y4 = radius2*math.sin(A)
 		x4 = sqrt( radius2**2 - y4**2 )
-		z4 = u+1
+		z4 = u+1+offset
 
 		vector = [
 					[x1, y1, z1],
@@ -424,11 +453,11 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
 	for t in range(2):
 		y1 = (t*cylinder_height+blade_thickness*2)*math.tan(degree1) 
 		x1 = sqrt(radius1**2 - y1**2) 
-		z1 = t*cylinder_height
+		z1 = t*cylinder_height+offset
 
 		y3 = (t*cylinder_height)*math.tan(degree1) 
 		x3 = sqrt( radius1**2 - y3**2) 
-		z3 = t*cylinder_height
+		z3 = t*cylinder_height+offset
 
 		# radius2
 		a = (t*cylinder_height+blade_thickness)*math.tan(degree2)
@@ -436,14 +465,14 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
 
 		y2 = radius2*math.sin(A)
 		x2 = sqrt( radius2**2 - y2**2) 
-		z2 = t*cylinder_height
+		z2 = t*cylinder_height+offset
 
 		a = (t*cylinder_height)*math.tan(degree2)
 		A = math.asin(a/radius2)
 
 		y4 = radius2*math.sin(A) 
 		x4 = sqrt( radius2**2 - y4**2 )
-		z4 = t*cylinder_height
+		z4 = t*cylinder_height+offset
 
 		vector = [
 					[x1, y1, z1],
@@ -473,31 +502,45 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop):
 
 	return data
 
+#compressor sections
+for i in range(sections_amount):
+	cylinder = make_cylinder(section_radius, section_height, offset=section_offset + i*section_height, shape_function="math.cos(math.pi/6) * i * radius")
+	sections.append( cylinder )
+
 #propellers
 for i in range(blades):
-	propeller.append(make_propeller(cylinder_radius, blade_radius, blade_thickness, cylinder_height, blade_angles[0], blade_angles[1], i ))
+	propeller.append(make_propeller(cylinder_radius, blade_radius, blade_thickness, cylinder_height, blade_angles[0], blade_angles[1], i, offset=cylinder_offset ))
 
 #hyperfan
-cylinder = make_cylinder(cylinder_radius, cylinder_height, 0, propeller_attachments)
-cylinder_bot = make_circle(0, cylinder_radius, offset=0)
-cylinder_top = make_circle(rod_radius, cylinder_radius, offset=cylinder_height, flip=1)
+cylinder = make_cylinder(cylinder_radius, cylinder_height, offset=cylinder_offset, attachment_points = propeller_attachments)
+cylinder_bot = make_circle(rod1_radius, cylinder_radius, offset=cylinder_offset)
+cylinder_top = make_circle(0, cylinder_radius, offset=cylinder_height+cylinder_offset, flip=1)
 
 #rod
-rod = make_cylinder(rod_radius, rod_height, offset = cylinder_height)
-rod_top = make_circle(0, rod_radius, offset = cylinder_height+rod_height, flip=1)
+rod = make_cylinder(rod1_radius, rod1_height, offset = rod1_offset)
+rod_top = make_circle(0, rod1_radius, offset = rod1_offset+rod1_height, flip=1)
 
 #duct
-duct_inner = make_cylinder(blade_radius+duct_gap, cylinder_height)
-duct_outer = make_cylinder(blade_radius+duct_gap+duct_thickness, cylinder_height)
-duct_bot = make_circle(blade_radius+duct_gap, blade_radius+duct_gap+duct_thickness, offset=0)
-duct_top = make_circle(blade_radius+duct_gap, blade_radius+duct_gap+duct_thickness, offset=cylinder_height, flip=1)
+duct_inner = make_cylinder(blade_radius+duct_gap, duct_height, offset=duct_offset)
+duct_outer = make_cylinder(blade_radius+duct_gap+duct_thickness, duct_height, offset=duct_offset)
+# duct_bot = make_circle(blade_radius+duct_gap, blade_radius+duct_gap+duct_thickness, offset=duct_offset)
+duct_top = make_circle(blade_radius+duct_gap, blade_radius+duct_gap+duct_thickness, offset=duct_offset+duct_height, flip=1)
 
+
+#compressor tube
+compressor_tube_inner = make_cylinder(compressor_radius, compressor_height, offset=compressor_offset)
+compressor_tube_outer = make_cylinder(compressor_radius+compressor_thickness, compressor_height, offset=compressor_offset)
+compressor_tube_bot = make_circle(compressor_radius, compressor_radius+compressor_thickness, offset=compressor_offset)
+compressor_tube_top = make_circle(compressor_radius, compressor_radius+compressor_thickness, offset=compressor_offset+compressor_height, flip=1)
 
 
 #starting points
 combined = numpy.append(cylinder_bot, cylinder_top)
 # combined = numpy.append(duct_inner, duct_outer)
 # combined = numpy.append(rod, rod_top)
+
+#compressor
+combined = numpy.append(combined, sections)
 
 #hyperfan
 combined = numpy.append(combined, propeller)
@@ -508,10 +551,16 @@ combined = numpy.append(combined, rod_top)
 combined = numpy.append(combined, rod)
 
 #duct
-# combined = numpy.append(combined, duct_inner)
-# combined = numpy.append(combined, duct_outer)
+combined = numpy.append(combined, duct_inner)
+combined = numpy.append(combined, duct_outer)
 # combined = numpy.append(combined, duct_bot)
-# combined = numpy.append(combined, duct_top)
+combined = numpy.append(combined, duct_top)
+
+#compressor
+# combined = numpy.append(combined, compressor_tube_inner)
+# combined = numpy.append(combined, compressor_tube_outer)
+combined = numpy.append(combined, compressor_tube_bot)
+combined = numpy.append(combined, compressor_tube_top)
 
 
 combined = mesh.Mesh(combined)

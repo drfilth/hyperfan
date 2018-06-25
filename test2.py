@@ -1,13 +1,14 @@
 import math
 
-#x' = x cos θ − y sin θ
-vector = [
-	[25,5,0],
-	[28,7,0],
-	[30,4,0]
-]
+angle = math.pi/6
 
-for i in vector:
-	print(i[0]*math.cos(math.radians(90)) - i[1]*math.sin(math.radians(90)))
-	print(i[0]*math.sin(math.radians(90)) + i[1]*math.cos(math.radians(90)))
-	print()
+radius = 15
+
+for i in range(10):
+	radius1 =  math.cos(angle) * i * radius
+	radius2 =  math.cos(angle) * (i+1) * radius
+
+	print(i, radius1, radius2)
+
+
+
