@@ -31,7 +31,7 @@ section_radius_increment = 1*scale
 section_blade_radius = 5*scale
 section_blade_radius_increment_ratio = 1.5
 sections_amount = 10
-
+section_taper = math.pi/60
 
 
 #other
@@ -63,9 +63,7 @@ duct_offset = cylinder_offset - cylinder_offset/duct_ratio/4
 
 def clss():
     os.system('cls' if os.name=='nt' else 'clear')
-
-# now, to clear the screen
-clss()
+# clss()
 
 def myround(x, base=5, errormargin=0):
 	return_temp = base * float(x)/base
@@ -107,7 +105,7 @@ def rotate_vector(vector, angle):
 	return vector
 
 
-def make_cylinder(radius, height, offset=0, attachment_points = None, shape_function="radius"):
+def make_cylinder(radius, height, offset=0, attachment_points = None, shape_function=None):
 	omkreds = 2*radius*math.pi
 	omkreds_rounded = math.ceil(omkreds)
 	triangles= omkreds_rounded*2
@@ -118,8 +116,12 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 	isbetween, isbetween_temp = False, False
 
 	for u in range(height):
-		radius1 = eval(shape_function) 
-		radius2 = eval(shape_function) 
+		if shape_function:
+			radius1 = shape_function(u, radius, section_taper, height)
+			radius2 = shape_function(u+1, radius, section_taper, height)
+		else:
+			radius1 = radius
+			radius2 = radius
 		u = u
 		for i in range(0, omkreds_rounded):
 			degree1 = 2*sympy.pi/omkreds*i
@@ -131,16 +133,16 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 			y1 = radius1*math.sin( degree1 )
 			z1 = u+offset
 
-			x2 = radius2*math.cos( degree2 )
-			y2 = radius2*math.sin( degree2 )
+			x2 = radius1*math.cos( degree2 )
+			y2 = radius1*math.sin( degree2 )
 			z2 = u+offset
 
-			x3 = x1
-			y3 = y1
+			x3 = radius2*math.cos( degree1 )
+			y3 = radius2*math.sin( degree1 )
 			z3 = u+1+offset
 
-			x4 = x2
-			y4 = y2
+			x4 = radius2*math.cos( degree2 )
+			y4 = radius2*math.sin( degree2 )
 			z4 = u+1+offset
 
 			vector = [
@@ -503,9 +505,14 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 	return data
 
 #compressor sections
+shape = (lambda u, radius, φ, height: math.sin(φ) * radius * (u/height) + radius)
 for i in range(sections_amount):
-	cylinder = make_cylinder(section_radius, section_height, offset=section_offset + i*section_height, shape_function="math.cos(math.pi/6) * i * radius")
+	ayylmao = shape(-i, section_radius, section_taper, sections_amount)
+	print(ayylmao)
+	cylinder = make_cylinder( ayylmao , section_height, offset=section_offset + i*section_height, shape_function= shape )
 	sections.append( cylinder )
+#	print(shape(-i, section_radius, section_taper, sections_amount))
+	print(cylinder)
 
 #propellers
 for i in range(blades):
@@ -559,8 +566,8 @@ combined = numpy.append(combined, duct_top)
 #compressor
 # combined = numpy.append(combined, compressor_tube_inner)
 # combined = numpy.append(combined, compressor_tube_outer)
-combined = numpy.append(combined, compressor_tube_bot)
-combined = numpy.append(combined, compressor_tube_top)
+# combined = numpy.append(combined, compressor_tube_bot)
+# combined = numpy.append(combined, compressor_tube_top)
 
 
 combined = mesh.Mesh(combined)
