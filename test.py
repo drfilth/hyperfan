@@ -31,8 +31,6 @@ section_radius_increment = 1*scale
 section_blade_radius = 5*scale
 section_blade_radius_increment_ratio = 1.5
 sections_amount = 10
-section_taper = math.pi/60
-
 
 #other
 compressor_height = sections_amount * section_height
@@ -117,8 +115,8 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 
 	for u in range(height):
 		if shape_function:
-			radius1 = shape_function(u, radius, section_taper, height)
-			radius2 = shape_function(u+1, radius, section_taper, height)
+			radius1 = shape_function(u, radius, height)
+			radius2 = shape_function(u+1, radius, height)
 		else:
 			radius1 = radius
 			radius2 = radius
@@ -248,7 +246,9 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 				if isbetween and not isbetween_temp:
 					triangle += -2
 
-	return data
+	if not shape_function:
+		return data
+	return data, radius2
 
 def make_circle(radius1, radius2, offset=0, flip=0):
 	omkreds1 = 2*radius1*math.pi
@@ -505,14 +505,10 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 	return data
 
 #compressor sections
-shape = (lambda u, radius, φ, height: math.sin(φ) * radius * (u/height) + radius)
+shape = (lambda u, radius, height: radius - radius * u**section_blade_radius_increment_ratio / height )
 for i in range(sections_amount):
-	ayylmao = shape(-i, section_radius, section_taper, sections_amount)
-	print(ayylmao)
-	cylinder = make_cylinder( ayylmao , section_height, offset=section_offset + i*section_height, shape_function= shape )
+	cylinder, section_radius = make_cylinder( section_radius, section_height, offset=section_offset + i*section_height, shape_function=shape)
 	sections.append( cylinder )
-#	print(shape(-i, section_radius, section_taper, sections_amount))
-	print(cylinder)
 
 #propellers
 for i in range(blades):
@@ -547,7 +543,8 @@ combined = numpy.append(cylinder_bot, cylinder_top)
 # combined = numpy.append(rod, rod_top)
 
 #compressor
-combined = numpy.append(combined, sections)
+for i in sections:
+	combined = numpy.append(combined, i)
 
 #hyperfan
 combined = numpy.append(combined, propeller)
