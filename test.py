@@ -14,41 +14,48 @@ else:
 	print("without sympy")
 	import math as sympy
 
-propeller_attachments = {}
+
+attach = []
+attach_compressor = []
 propeller = []
 sections = []
 
 
 #alle mål er i micrometer ( 1/1000 millimeter )
-scale = 1
+scale = 2
 
 
 #compressor sections
-section_height = 5*scale
+section_height = 6*scale
+section_height_2 = section_height
 section_offset = 0*scale
-section_radius = 15*scale
-section_radius_increment = 1*scale
-section_blade_radius = 5*scale
-section_blade_radius_increment_ratio = 1.5
-sections_amount = 10
+section_radius = 10*scale
+section_blade_radius_increment_ratio = 0.5
+sections_amount = 6
+section_blade_density = 2.5*scale # 3*scale 
+section_blade_thickness = [0.5*scale, 0.25*scale]
+section_prop_radius_outer = section_radius + 1*scale
+
+section_blade_angles = [sympy.pi/4,  sympy.pi/4]
+section_stator_angles = [sympy.pi/4 + sympy.pi/2,  sympy.pi/4 + sympy.pi/2]
 
 #other
 compressor_height = sections_amount * section_height
-compressor_radius = (section_radius + 1 * scale) * scale
+compressor_radius = section_prop_radius_outer + 1
 compressor_thickness = 1*scale
 compressor_offset = 0*scale
 
-rod1_radius = 2.5*scale
-rod1_height = 10*scale
+rod1_radius = 2.2*scale
+rod1_height = 1*scale
 rod1_offset = compressor_height + compressor_offset
 
 cylinder_radius = 5*scale
 cylinder_height = 10*scale
 cylinder_offset = rod1_offset + rod1_height
 
-blades = 4
+blades = 8
 blade_radius = 50*scale
-blade_thickness = 1*scale
+blade_thickness = [1*scale, 1*scale]
 # blade_angles = [20,  45]
 blade_angles = [sympy.pi/9,  sympy.pi/4]
 
@@ -61,7 +68,7 @@ duct_offset = cylinder_offset - cylinder_offset/duct_ratio/4
 
 def clss():
     os.system('cls' if os.name=='nt' else 'clear')
-# clss()
+clss()
 
 def myround(x, base=5, errormargin=0):
 	return_temp = base * float(x)/base
@@ -73,9 +80,9 @@ def between(n1, n2, n3, angle=0):
 	if angle in [1/4,2/4,3/4]:
 		if abs(n3) > abs(n1) and abs(n3) > abs(n2):
 			return True
-	if n1 <= n3 and n2 >= n3:
+	if n1 <= n3 and n2 > n3:
 		return True
-	if n1 >= n3 and n2 <= n3:
+	if n1 >= n3 and n2 < n3:
 		return True
 	return False
 
@@ -103,8 +110,8 @@ def rotate_vector(vector, angle):
 	return vector
 
 
-def make_cylinder(radius, height, offset=0, attachment_points = None, shape_function=None):
-	omkreds = 2*radius*math.pi
+def make_cylinder(radius, height, offset=0, attachment_points = None, shape_function=None, flip=0):
+	omkreds = math.ceil(2*radius*math.pi)
 	omkreds_rounded = math.ceil(omkreds)
 	triangles= omkreds_rounded*2
 	rotation = 0
@@ -115,8 +122,8 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 
 	for u in range(height):
 		if shape_function:
-			radius1 = shape_function(u, radius, height)
-			radius2 = shape_function(u+1, radius, height)
+			radius1 = radius - shape_function(u, section_radius1, section_radius2, section_height)
+			radius2 = radius - shape_function(u+1, section_radius1, section_radius2, section_height)
 		else:
 			radius1 = radius
 			radius2 = radius
@@ -148,29 +155,34 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 						[x2, y2, z2],
 						[x3, y3, z3]
 					]
+			if flip != 0:
+				vector = flip_orientation(vector)
 
 			data["vectors"][triangle] = numpy.array(vector)
 			triangle += 1
+
 
 			vector = [
 						[x2, y2, z2],
 						[x4, y4, z4],
 						[x3, y3, z3]
 					]
+			if flip != 0:
+				vector = flip_orientation(vector)
 			data["vectors"][triangle] = numpy.array(vector)
 			triangle += 1
 
+
 			if attachment_points != None:
-				if rotation == blades:
+				if u >= attachment_points["height"]:
+					continue
+				if rotation == attachment_points["blades"]:
 					rotation=0
-				# if u ==6 and i ==0: 
-				# 	rotation = blades-1
 				isbetween_temp = False
 				rotary_angle_2 = myround((1/omkreds)*(i+1), 0.01, 1/omkreds)
 				if i == 0:
 					rotary_angle_2 = 0.25
 
-				# første attachment
 				a_u = attachment_points["{}-{}-0".format(rotation,u)][0]
 				attach_x1 = a_u[0][0]
 				attach_y1 = a_u[0][1]
@@ -215,6 +227,7 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 					isbetween_temp = True
 
 
+
 				#højre side
 				if between(x3, x4, attach_x4, rotary_angle_2) and between(y3, y4, attach_y4, rotary_angle_2):
 					data["vectors"][triangle-2][2][0] = attach_x4
@@ -238,12 +251,17 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 						data["vectors"][triangle] = vector
 						triangle+=1
 
+
 					isbetween = False
 					rotation += 1
 					if i == omkreds_rounded-1 and attach_y5 > 0:
 						rotation += -1
 
-				if isbetween and not isbetween_temp:
+				#når en ny linje laves, kan der opstå en extra firkant fordi isbetween bliver sat til false på linjeskift. dette tjekker om firkanten er imellem.
+				if i == 0 and between(attach_y3, attach_y4, y4 , 0.12):
+					isbetween = True
+
+				if isbetween and not isbetween_temp :
 					triangle += -2
 
 	if not shape_function:
@@ -251,10 +269,10 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 	return data, radius2
 
 def make_circle(radius1, radius2, offset=0, flip=0):
-	omkreds1 = 2*radius1*math.pi
+	omkreds1 = math.ceil(2*radius1*math.pi)
 	if omkreds1 == 0:
 		omkreds1 = 1
-	omkreds2 = 2*radius2*math.pi
+	omkreds2 = math.ceil(2*radius2*math.pi)
 	omkreds2_rounded = math.ceil(omkreds2)
 	triangles = omkreds2_rounded*2*2
 
@@ -324,43 +342,44 @@ def make_circle(radius1, radius2, offset=0, flip=0):
 
 	return data
 
-def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0):
-	# degree1 = math.radians(angle1)
-	# degree2 = math.radians(angle2)
-	# degree3 = math.radians(360/blades*prop)
-	degree1 = angle1
-	degree2 = angle2
+def make_propeller(radius1,radius2,thickness,chord,degree1,degree2, prop, offset=0, blades=1, shape_function=None, reversed=0):
+	propeller_attachments = {"height":chord}
 	degree3 = 2/blades*prop*sympy.pi
-	# print(degree3)
-
-	data = numpy.zeros(cylinder_height*2*2*2, dtype=mesh.Mesh.dtype)
-
+	data = numpy.zeros(chord*2*2*2*2, dtype=mesh.Mesh.dtype)
 	triangle = 0
 
-	for u in range(cylinder_height):
+	for u in range(chord):
+		if shape_function:
+			radius3 = radius1 - shape_function(u+1, section_radius1, section_radius2, section_height)
+			radius1_1 = radius1 - shape_function(u, section_radius1, section_radius2, section_height)
+		else:
+			radius3 = radius1
+			radius1_1 = radius1
+		radius4 = radius2
+
 		for t in range(2):
 			# radius1
-			y1 = (u+blade_thickness*t*2)*math.tan(degree1) 
-			x1 = sqrt(radius1**2 - y1**2) 
+			y1 = (u+thickness[1]*t*2)*math.tan(degree1) 
+			x1 = sqrt(radius1_1**2 - y1**2) 
 			z1 = u+offset
 
-			y3 = (u+1+blade_thickness*t*2)*math.tan(degree1) 
-			x3 = sqrt( radius1**2 - y3**2) 
+			y3 = (u+1+thickness[1]*t*2)*math.tan(degree1) 
+			x3 = sqrt( radius3**2 - y3**2) 
 			z3 = u+1+offset
 
 			# radius2
-			a = (u+blade_thickness*t)*math.tan(degree2)
+			a = (u+thickness[0]*t)*math.tan(degree2)
 			A = math.asin(a/radius2)
 
 			y2 = radius2*math.sin(A)
 			x2 = sqrt( radius2**2 - y2**2) 
 			z2 = u+offset
 
-			a = (u+1+blade_thickness*t)*math.tan(degree2)
-			A = math.asin(a/radius2)
+			a = (u+1+thickness[0]*t)*math.tan(degree2)
+			A = math.asin(a/radius4)
 
-			y4 = radius2*math.sin(A) 
-			x4 = sqrt( radius2**2 - y4**2 )
+			y4 = radius4*math.sin(A) 
+			x4 = sqrt( radius4**2 - y4**2 )
 			z4 = u+1+offset
 
 			vector = [
@@ -378,8 +397,12 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 										vector[0],
 										vector[2]
 									])
+
 			if t == 1:
 				vector = flip_orientation(vector, [0,2,1])
+			if reversed !=0:
+				vector = flip_orientation(vector)
+
 
 			data["vectors"][triangle] = numpy.array(vector)
 			triangle += 1
@@ -394,38 +417,44 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 			vector = rotate_vector(vector, degree3)
 			if t == 1:
 				vector = flip_orientation(vector)
+			if reversed !=0:
+				vector = flip_orientation(vector)
 
 			data["vectors"][triangle] = numpy.array(vector)
 			triangle += 1
 
 		#edge
-		a = (u+blade_thickness*0)*math.tan(degree2)
-		A = math.asin(a/radius2)
+		radius_edge = radius2
+		if reversed !=0:
+			radius_edge = radius1
 
-		y1 = radius2*math.sin(A)
-		x1 = sqrt( radius2**2 - y1**2) 
+		a = (u+thickness[0]*0)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
+
+		y1 = radius_edge*math.sin(A)
+		x1 = sqrt( radius_edge**2 - y1**2) 
 		z1 = u+offset
 
-		a = (u+1+blade_thickness*0)*math.tan(degree2)
-		A = math.asin(a/radius2)
+		a = (u+1+thickness[0]*0)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
 
-		y3 = radius2*math.sin(A)
-		x3 = sqrt( radius2**2 - y3**2 )
+		y3 = radius_edge*math.sin(A)
+		x3 = sqrt( radius_edge**2 - y3**2 )
 		z3 = u+1+offset
 
 
-		a = (u+blade_thickness*1)*math.tan(degree2)
-		A = math.asin(a/radius2)
+		a = (u+thickness[0]*1)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
 
-		y2 = radius2*math.sin(A)
-		x2 = sqrt( radius2**2 - y2**2) 
+		y2 = radius_edge*math.sin(A)
+		x2 = sqrt( radius_edge**2 - y2**2) 
 		z2 = u+offset
 
-		a = (u+1+blade_thickness*1)*math.tan(degree2)
-		A = math.asin(a/radius2)
+		a = (u+1+thickness[0]*1)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
 
-		y4 = radius2*math.sin(A)
-		x4 = sqrt( radius2**2 - y4**2 )
+		y4 = radius_edge*math.sin(A)
+		x4 = sqrt( radius_edge**2 - y4**2 )
 		z4 = u+1+offset
 
 		vector = [
@@ -435,8 +464,6 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 				]
 
 		vector = rotate_vector(vector, degree3)
-		# print(vector)
-
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1
 
@@ -446,35 +473,37 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 					[x3, y3, z3]
 				]
 		vector = rotate_vector(vector, degree3)
-		# print(vector)
 
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1
 
 	#bottom and top
 	for t in range(2):
-		y1 = (t*cylinder_height+blade_thickness*2)*math.tan(degree1) 
-		x1 = sqrt(radius1**2 - y1**2) 
-		z1 = t*cylinder_height+offset
+		if shape_function:
+			radius1_1 = radius1 - shape_function(chord*t, section_radius1, section_radius2, section_height)
 
-		y3 = (t*cylinder_height)*math.tan(degree1) 
-		x3 = sqrt( radius1**2 - y3**2) 
-		z3 = t*cylinder_height+offset
+		y1 = (t*chord+thickness[1]*2)*math.tan(degree1) 
+		x1 = sqrt(radius1_1**2 - y1**2) 
+		z1 = t*chord+offset
+
+		y3 = (t*chord)*math.tan(degree1) 
+		x3 = sqrt( radius1_1**2 - y3**2) 
+		z3 = t*chord+offset
 
 		# radius2
-		a = (t*cylinder_height+blade_thickness)*math.tan(degree2)
+		a = (t*chord+thickness[0])*math.tan(degree2)
 		A = math.asin(a/radius2)
 
 		y2 = radius2*math.sin(A)
 		x2 = sqrt( radius2**2 - y2**2) 
-		z2 = t*cylinder_height+offset
+		z2 = t*chord+offset
 
-		a = (t*cylinder_height)*math.tan(degree2)
+		a = (t*chord)*math.tan(degree2)
 		A = math.asin(a/radius2)
 
 		y4 = radius2*math.sin(A) 
 		x4 = sqrt( radius2**2 - y4**2 )
-		z4 = t*cylinder_height+offset
+		z4 = t*chord+offset
 
 		vector = [
 					[x1, y1, z1],
@@ -485,6 +514,9 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 		vector = rotate_vector(vector, degree3)
 		if t == 1:
 			vector = flip_orientation(vector)
+		if reversed !=0:
+			vector = flip_orientation(vector)
+
 
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1
@@ -497,68 +529,122 @@ def make_propeller(radius1,radius2,thickness,chord,angle1,angle2, prop, offset=0
 		vector = rotate_vector(vector, degree3)
 		if t == 1:
 			vector = flip_orientation(vector)
+		if reversed !=0:
+			vector = flip_orientation(vector)
 
 
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1
 
-	return data
+	return data, propeller_attachments
+
+
+
+
+
+
+
+
+
+
+
 
 #compressor sections
-shape = (lambda u, radius, height: radius - radius * u**section_blade_radius_increment_ratio / height )
+compressor_inner_bot = make_circle(0, section_radius, offset=0)
+
+shape = (lambda u, section_radius1, section_radius2, section_height: (section_radius2 - section_radius1) * (u) / section_height )
 for i in range(sections_amount):
-	cylinder, section_radius = make_cylinder( section_radius, section_height, offset=section_offset + i*section_height, shape_function=shape)
-	sections.append( cylinder )
+	section_radius1 = section_radius * section_blade_radius_increment_ratio**(sections_amount-i)
+	section_radius2 = section_radius * section_blade_radius_increment_ratio**(sections_amount-i-1)
+	section_blades = int((section_radius*2*math.pi) / section_blade_density )
+	attach.append({"blades":section_blades})
+	attach_compressor.append({"blades":section_blades})
+	# print(section_radius1, section_radius2)
+
+	for q in range(section_blades):
+		prop = make_propeller(section_radius, section_prop_radius_outer, section_blade_thickness, int(section_height/2), section_blade_angles[0], section_blade_angles[1], q, 
+			offset=section_offset + i*section_height, blades = section_blades, shape_function=shape )
+		attach[i] = {**attach[i] , **prop[1] }
+		# propeller.append(prop[0])
+
+		if i != sections_amount-1:
+			stators = make_propeller(section_radius+1, compressor_radius, section_blade_thickness, int(section_height/2), section_stator_angles[0], section_stator_angles[1], q, 
+				offset=section_offset + i*section_height + section_height/2, blades = section_blades, reversed=1 )
+			attach_compressor[i] = {**attach_compressor[i] , **stators[1] }
+			propeller.append(stators[0])
+
+
+	if i == sections_amount-1:
+		section_height_2 = int(section_height/2)
+
+	# cylinder, section_radius = make_cylinder( section_radius, section_height_2, offset=section_offset + i*section_height, shape_function=shape, attachment_points = attach[i] 
+	# 	)
+	# sections.append( cylinder )
+
+	if i != sections_amount-1:
+		cylinder = make_cylinder( compressor_radius, section_height_2, offset=section_offset + i*section_height, flip=1, attachment_points = attach_compressor[i])
+		sections.append(cylinder)
+
+
+	rod1_offset = section_offset + i*section_height + section_height_2
+
+
 
 #propellers
+attach.append({"blades":blades})
 for i in range(blades):
-	propeller.append(make_propeller(cylinder_radius, blade_radius, blade_thickness, cylinder_height, blade_angles[0], blade_angles[1], i, offset=cylinder_offset ))
+	prop = make_propeller(cylinder_radius, blade_radius, blade_thickness, cylinder_height, blade_angles[0], blade_angles[1], i, offset=cylinder_offset , blades = blades)
+	attach[-1] = {**attach[-1] , **prop[1] }
+	# propeller.append(prop[0])
 
 #hyperfan
-cylinder = make_cylinder(cylinder_radius, cylinder_height, offset=cylinder_offset, attachment_points = propeller_attachments)
-cylinder_bot = make_circle(rod1_radius, cylinder_radius, offset=cylinder_offset)
-cylinder_top = make_circle(0, cylinder_radius, offset=cylinder_height+cylinder_offset, flip=1)
+# cylinder = make_cylinder(cylinder_radius, cylinder_height, offset=cylinder_offset, attachment_points = attach[-1])
+# cylinder_bot = make_circle(rod1_radius, cylinder_radius, offset=cylinder_offset)
+# cylinder_top = make_circle(0, cylinder_radius, offset=cylinder_height+cylinder_offset, flip=1)
 
 #rod
 rod = make_cylinder(rod1_radius, rod1_height, offset = rod1_offset)
 rod_top = make_circle(0, rod1_radius, offset = rod1_offset+rod1_height, flip=1)
+rod_bot = make_circle(rod1_radius, section_radius, offset = rod1_offset, flip=1)
 
 #duct
-duct_inner = make_cylinder(blade_radius+duct_gap, duct_height, offset=duct_offset)
+duct_inner = make_cylinder(blade_radius+duct_gap, duct_height, offset=duct_offset, flip=1)
 duct_outer = make_cylinder(blade_radius+duct_gap+duct_thickness, duct_height, offset=duct_offset)
 # duct_bot = make_circle(blade_radius+duct_gap, blade_radius+duct_gap+duct_thickness, offset=duct_offset)
 duct_top = make_circle(blade_radius+duct_gap, blade_radius+duct_gap+duct_thickness, offset=duct_offset+duct_height, flip=1)
 
 
 #compressor tube
-compressor_tube_inner = make_cylinder(compressor_radius, compressor_height, offset=compressor_offset)
+# compressor_tube_inner = make_cylinder(compressor_radius, compressor_height, offset=compressor_offset, flip=1)
 compressor_tube_outer = make_cylinder(compressor_radius+compressor_thickness, compressor_height, offset=compressor_offset)
 compressor_tube_bot = make_circle(compressor_radius, compressor_radius+compressor_thickness, offset=compressor_offset)
 compressor_tube_top = make_circle(compressor_radius, compressor_radius+compressor_thickness, offset=compressor_offset+compressor_height, flip=1)
 
-
 #starting points
-combined = numpy.append(cylinder_bot, cylinder_top)
+# combined = numpy.append(cylinder_bot, cylinder_top)
 # combined = numpy.append(duct_inner, duct_outer)
-# combined = numpy.append(rod, rod_top)
+combined = numpy.append(rod, rod_top)
 
-#compressor
+#compressor inner part
 for i in sections:
 	combined = numpy.append(combined, i)
+combined = numpy.append(combined, compressor_inner_bot)
 
 #hyperfan
-combined = numpy.append(combined, propeller)
-combined = numpy.append(combined, cylinder)
+for i in propeller:
+	combined = numpy.append(combined, i)
+# combined = numpy.append(combined, cylinder)
 
 #rod
-combined = numpy.append(combined, rod_top)
-combined = numpy.append(combined, rod)
+# combined = numpy.append(combined, rod_top)
+# combined = numpy.append(combined, rod)
+# combined = numpy.append(combined, rod_bot)
 
 #duct
-combined = numpy.append(combined, duct_inner)
-combined = numpy.append(combined, duct_outer)
-# combined = numpy.append(combined, duct_bot)
-combined = numpy.append(combined, duct_top)
+# combined = numpy.append(combined, duct_inner)
+# combined = numpy.append(combined, duct_outer)
+# combined = numpy.append(combined, duct_top)
+# # combined = numpy.append(combined, duct_bot)
 
 #compressor
 # combined = numpy.append(combined, compressor_tube_inner)
@@ -571,5 +657,5 @@ combined = mesh.Mesh(combined)
 
 combined.save(filename="test.stl")
 
-os.system('{}\\test.stl'.format(os.getcwd()))
+# os.system('{}\\test.stl'.format(os.getcwd()))
 
