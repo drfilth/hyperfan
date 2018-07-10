@@ -66,11 +66,11 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 	triangle = 0
 	isbetween, isbetween_temp = False, False
 
-	iterator = range(height)
+	iterator = range(0, omkreds_rounded)
 	if reversed:
-		iterator = range(height,0,-1)
+		iterator = range(omkreds_rounded,int(omkreds_rounded/2),-1)
 
-	for u in iterator:
+	for u in range(height):
 		if shape_function:
 			radius1 = radius - shape_function[0](u, shape_function[1], shape_function[2], shape_function[3])
 			radius2 = radius - shape_function[0](u+1, shape_function[1], shape_function[2], shape_function[3])
@@ -78,7 +78,7 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 			radius1 = radius
 			radius2 = radius
 		u = u
-		for i in range(0, omkreds_rounded):
+		for i in iterator:
 			degree1 = 2*sympy.pi/omkreds*i
 			degree2 = 2*sympy.pi/omkreds*(i+1)
 			if i == omkreds_rounded-1:
@@ -153,6 +153,15 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 				except:
 					attach_y5 = 0
 
+				if reversed and u == 0 and i ==omkreds_rounded-1:
+					print(attach_y1, attach_y2, attach_y3, attach_y4, "\n")
+					print(x1, x2, attach_x1, between(x1, x2, attach_x1, rotary_angle_2))
+					print(y1, y2, attach_y1, between(y1, y2, attach_y1, rotary_angle_2))
+
+					print(x3, x4, attach_x3, between(x3, x4, attach_x3, rotary_angle_2))
+					print(y3, y4, attach_y3, between(y3, y4, attach_y3, rotary_angle_2))
+					print()
+
 				if between(x1, x2, attach_x1, rotary_angle_2) and between(y1, y2, attach_y1, rotary_angle_2):
 					data["vectors"][triangle-2][1][0] = attach_x1
 					data["vectors"][triangle-2][1][1] = attach_y1
@@ -176,6 +185,13 @@ def make_cylinder(radius, height, offset=0, attachment_points = None, shape_func
 					isbetween = True
 					isbetween_temp = True
 
+				if reversed and u == 0 and i ==omkreds_rounded-1:
+					print(x3, x4, attach_x4, between(x3, x4, attach_x4, rotary_angle_2))
+					print(y3, y4, attach_y4, between(y3, y4, attach_y4, rotary_angle_2))
+
+					print(x3, x4, attach_x2, between(x3, x4, attach_x2, rotary_angle_2))
+					print(y3, y4, attach_y2, between(y3, y4, attach_y2, rotary_angle_2))
+					print()
 
 
 				#højre side
@@ -419,6 +435,7 @@ def make_propeller(radius1,radius2,thickness,chord,degree1,degree2, prop, offset
 				]
 
 		vector = rotate_vector(vector, degree3)
+		vector = flip_orientation(vector)
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1
 
@@ -428,6 +445,7 @@ def make_propeller(radius1,radius2,thickness,chord,degree1,degree2, prop, offset
 					[x3, y3, z3]
 				]
 		vector = rotate_vector(vector, degree3)
+		vector = flip_orientation(vector)
 
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1

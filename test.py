@@ -1,3 +1,4 @@
+# asobi asobase
 from stl import mesh
 from stl import stl
 import math
@@ -95,14 +96,15 @@ for i in range(sections_amount):
 	# print(section_radius1, section_radius2)
 
 	for q in range(section_blades):
-		prop = make_propeller(section_radius, section_prop_radius_outer, section_blade_thickness, int(section_height/2), section_blade_angles[0], section_blade_angles[1], q, 
-			offset=section_offset + i*section_height, blades = section_blades, shape_function=[shape, section_radius1, section_radius2, section_height] )
-		attach[i] = {**attach[i] , **prop[1] }
+		# prop = make_propeller(section_radius, section_prop_radius_outer, section_blade_thickness, int(section_height/2), section_blade_angles[0], section_blade_angles[1], q, 
+		# 	offset=section_offset + i*section_height, blades = section_blades, shape_function=[shape, section_radius1, section_radius2, section_height] )
+		# attach[i] = {**attach[i] , **prop[1] }
 		# propeller.append(prop[0])
 
 		if i != sections_amount-1:
 			stators = make_propeller(section_radius+1, compressor_radius, section_blade_thickness, int(section_height/2), section_stator_angles[0], section_stator_angles[1], q, 
-				offset=section_offset + i*section_height + section_height/2, blades = 1, reversed=1 )
+				offset=section_offset + i*section_height, blades = 1, reversed=1 
+				)
 			attach_compressor[i] = {**attach_compressor[i] , **stators[1] }
 			propeller.append(stators[0])
 
@@ -110,7 +112,7 @@ for i in range(sections_amount):
 	if i == sections_amount-1:
 		section_height_2 = int(section_height/2)
 
-	# cylinder, section_radius = make_cylinder( section_radius, section_height_2, offset=section_offset + i*section_height, shape_function=shape, attachment_points = attach[i] 
+	# cylinder, section_radius = make_cylinder( section_radius, section_height_2, offset=section_offset + i*section_height, shape_function=[shape, section_radius1, section_radius2, section_height], attachment_points = attach[i] 
 	# 	)
 	# sections.append( cylinder )
 
@@ -120,6 +122,7 @@ for i in range(sections_amount):
 
 
 	rod1_offset = section_offset + i*section_height + section_height_2
+	break
 
 
 
