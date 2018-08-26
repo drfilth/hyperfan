@@ -55,6 +55,17 @@ def rotate_vector(vector, angle):
 		vector[b][1] = x*math.sin(angle) + y * math.cos(angle)
 	return vector
 
+def move_vector(vector, movement_vector):
+	if len(vector) > 3:
+		for b in range(len(vector)):
+			# print(vector[b]["vectors"])
+			vector[b]["vectors"] = vector[b]["vectors"] + movement_vector
+
+	else:
+		vector = vector + movement_vector
+	return vector
+
+
 
 def make_cylinder(radius, height, offset=0, attachment_points = None, shape_function=None, flip=0, reversed=False):
 	omkreds = math.ceil(2*radius*math.pi)
@@ -326,10 +337,16 @@ def make_propeller(radius1,radius2,thickness,chord,degree1,degree2, prop, offset
 		for t in range(2):
 			# radius1
 			y1 = (u+thickness[1]*t*2)*math.tan(degree1) 
+			if degree1 == 0:
+				y1 = thickness[1]*t
+
 			x1 = sqrt(radius1_1**2 - y1**2) 
 			z1 = u+offset
 
 			y3 = (u+1+thickness[1]*t*2)*math.tan(degree1) 
+			if degree1 == 0:
+				y3 = thickness[1]*t
+
 			x3 = sqrt( radius3**2 - y3**2) 
 			z3 = u+1+offset
 
@@ -435,7 +452,7 @@ def make_propeller(radius1,radius2,thickness,chord,degree1,degree2, prop, offset
 				]
 
 		vector = rotate_vector(vector, degree3)
-		vector = flip_orientation(vector)
+		# vector = flip_orientation(vector)
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1
 
@@ -445,7 +462,7 @@ def make_propeller(radius1,radius2,thickness,chord,degree1,degree2, prop, offset
 					[x3, y3, z3]
 				]
 		vector = rotate_vector(vector, degree3)
-		vector = flip_orientation(vector)
+		# vector = flip_orientation(vector)
 
 		data["vectors"][triangle] = numpy.array(vector)
 		triangle += 1
@@ -510,3 +527,312 @@ def make_propeller(radius1,radius2,thickness,chord,degree1,degree2, prop, offset
 		triangle += 1
 
 	return data, propeller_attachments
+
+
+
+
+
+
+
+
+
+
+def make_propeller_v2(radius1,radius2,thickness,chord,degree1,degree2, offset=0):
+	data = numpy.zeros(chord*radius2*5, dtype=mesh.Mesh.dtype)
+	triangle = 0
+	delta_radius = radius2 - radius1
+
+	for u in range(chord):
+		print(u, chord)
+		for v in range(delta_radius):
+			delta_radius1 = radius1 + v
+			delta_radius2 = radius1 + v + 1
+			for t in range(2):
+				# radius1
+				y1 = thickness*t 
+				x1 = sqrt(delta_radius1**2 - y1**2) 
+				z1 = u+offset
+
+				y3 = thickness*t
+				x3 = sqrt(delta_radius1**2 - y3**2) 
+				z3 = u+1+offset
+
+				# radius2
+				a = (u+thickness*t/10)*math.tan(degree2)
+				A = math.asin(a/delta_radius2)
+
+				y2 = delta_radius2*math.sin(A)
+				x2 = sqrt( delta_radius2**2 - y2**2) 
+				z2 = u+offset
+
+				a = (u+1+thickness*t/10)*math.tan(degree2)
+				A = math.asin(a/delta_radius2)
+
+				y4 = delta_radius2*math.sin(A) 
+				x4 = sqrt( delta_radius2**2 - y4**2 )
+				z4 = u+1+offset
+
+				vector = [
+							[x1, y1, z1],
+							[x2, y2, z2],
+							[x3, y3, z3]
+						]
+
+				if t == 1:
+					vector = flip_orientation(vector, [0,2,1])
+
+				data["vectors"][triangle] = numpy.array(vector)
+				triangle += 1
+
+
+				vector = [
+							[x2, y2, z2],
+							[x4, y4, z4],
+							[x3, y3, z3]
+						]
+				if t == 1:
+					vector = flip_orientation(vector)
+
+				data["vectors"][triangle] = numpy.array(vector)
+				triangle += 1
+
+		#edge
+		radius_edge = radius2
+		a = (u+thickness*0)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
+
+		y1 = radius_edge*math.sin(A)
+		x1 = sqrt( radius_edge**2 - y1**2) 
+		z1 = u+offset
+
+		a = (u+1+thickness*0)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
+
+		y3 = radius_edge*math.sin(A)
+		x3 = sqrt( radius_edge**2 - y3**2 )
+		z3 = u+1+offset
+
+
+		a = (u+thickness*1/10)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
+
+		y2 = radius_edge*math.sin(A)
+		x2 = sqrt( radius_edge**2 - y2**2) 
+
+		z2 = u+offset
+
+		a = (u+1+thickness*1/10)*math.tan(degree2)
+		A = math.asin(a/radius_edge)
+
+		y4 = radius_edge*math.sin(A)
+		x4 = sqrt( radius_edge**2 - y4**2 )
+		z4 = u+1+offset
+
+		vector = [
+					[x1, y1, z1],
+					[x2, y2, z2],
+					[x3, y3, z3]
+				]
+		# vector = flip_orientation(vector)
+		data["vectors"][triangle] = numpy.array(vector)
+		triangle += 1
+
+		vector = [
+					[x2, y2, z2],
+					[x4, y4, z4],
+					[x3, y3, z3]
+				]
+		# vector = flip_orientation(vector)
+
+		data["vectors"][triangle] = numpy.array(vector)
+		triangle += 1
+
+	#bottom and top
+	for t in range(2):
+		y1 = thickness
+		x1 = sqrt(radius1**2 - y1**2) 
+		z1 = t*chord+offset
+
+		y3 = 0
+		x3 = sqrt( radius1**2 - y3**2) 
+		z3 = t*chord+offset
+
+		# radius2
+		a = (t*chord+thickness/10)*math.tan(degree2)
+		A = math.asin(a/radius2)
+
+		y2 = radius2*math.sin(A)
+		x2 = sqrt( radius2**2 - y2**2) 
+		z2 = t*chord+offset
+
+		a = (t*chord)*math.tan(degree2)
+		A = math.asin(a/radius2)
+
+		y4 = radius2*math.sin(A) 
+		x4 = sqrt( radius2**2 - y4**2 )
+		z4 = t*chord+offset
+
+		vector = [
+					[x1, y1, z1],
+					[x2, y2, z2],
+					[x3, y3, z3]
+				]
+
+		if t == 1:
+			vector = flip_orientation(vector)
+
+		data["vectors"][triangle] = numpy.array(vector)
+		triangle += 1
+
+		vector = [
+					[x2, y2, z2],
+					[x4, y4, z4],
+					[x3, y3, z3]
+				]
+		if t == 1:
+			vector = flip_orientation(vector)
+
+		data["vectors"][triangle] = numpy.array(vector)
+		triangle += 1
+
+	return data
+
+
+
+
+
+
+
+def make_propeller_mount(height, width, depth):
+	data = numpy.zeros(height*width*depth+90*2, dtype=mesh.Mesh.dtype)
+	triangle = 0
+
+	#back
+	#bottom
+	x1 = 0
+	y1 = 0
+	z1 = 0
+
+	x2 = 0
+	y2 = width
+	z2 = 0
+
+	#top
+	x3 = x1
+	y3 = y1
+	z3 = height
+
+	x4 = x2
+	y4 = y2
+	z4 = height
+
+	vector = [
+				[x1, y1, z1],
+				[x3, y3, z3],
+				[x2, y2, z2]
+			]
+	data["vectors"][triangle] = numpy.array(vector)
+	triangle += 1
+
+	vector = [
+				[x2, y2, z2],
+				[x3, y3, z3],
+				[x4, y4, z4]
+			]
+	data["vectors"][triangle] = numpy.array(vector)
+	triangle += 1
+
+	#mouth
+	for t in range(2):
+		#bot
+		x1 = depth
+		y1 = width*t
+		z1 = 0
+
+		x2 = depth * 1.1
+		y2 = width*t
+		z2 = 0
+
+		#top
+		x3 = x1
+		y3 = y1
+		z3 = height
+
+		x4 = x2
+		y4 = y2
+		z4 = height
+
+		vector = [
+					[x1, y1, z1],
+					[x2, y2, z2],
+					[x3, y3, z3]
+					
+				]
+		if t ==1 :
+			vector = flip_orientation(vector)
+		data["vectors"][triangle] = numpy.array(vector)
+		triangle += 1
+
+		vector = [
+					[x2, y2, z2],
+					[x4, y4, z4],
+					[x3, y3, z3]
+					
+				]
+		if t ==1 :
+			vector = flip_orientation(vector)
+		data["vectors"][triangle] = numpy.array(vector)
+		triangle += 1
+
+
+	#some of these numbers are hardcoded because they are not supposed to be variable
+	curve_resolution = 94
+	for t in range(2):
+		reverser = [-1,1]
+		for i in range(curve_resolution):
+			#bottom
+			x1 = i * depth/curve_resolution
+			y1 = abs(math.sin(i/10)) * reverser[t] * (width/2.5) + t*width
+			z1 = 0
+			# print(i, y1)
+
+			x2 = (i+1) * depth/curve_resolution
+			y2 = abs(math.sin((i+1)/10)) * reverser[t] * (width/2.5) + t*width
+			z2 = 0
+			if i == curve_resolution -1:
+				x2 = depth
+				y2 = width*t
+
+			#top
+			x3 = x1
+			y3 = y1
+			z3 = height
+
+			x4 = x2
+			y4 = y2
+			z4 = height
+
+
+
+			vector = [
+						[x1, y1, z1],
+						[x2, y2, z2],
+						[x3, y3, z3]
+					]
+			if t == 1:
+				vector = flip_orientation(vector)
+			data["vectors"][triangle] = numpy.array(vector)
+			triangle += 1
+
+			vector = [
+						[x2, y2, z2],
+						[x4, y4, z4],
+						[x3, y3, z3]
+					]
+			if t == 1:
+				vector = flip_orientation(vector)
+			data["vectors"][triangle] = numpy.array(vector)
+			triangle += 1
+
+	return data
+

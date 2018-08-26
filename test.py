@@ -1,4 +1,3 @@
-# asobi asobase
 from stl import mesh
 from stl import stl
 import math
@@ -54,11 +53,11 @@ cylinder_radius = 5*scale
 cylinder_height = 10*scale
 cylinder_offset = rod1_offset + rod1_height
 
-blades = 8
+blades = 1
 blade_radius = 50*scale
-blade_thickness = [1*scale, 1*scale]
+blade_thickness = [1, 1*scale]
 # blade_angles = [20,  45]
-blade_angles = [sympy.pi/9,  sympy.pi/4]
+blade_angles = [0,  sympy.pi/4]
 
 duct_ratio = 2
 duct_gap = 1/10*scale
@@ -86,43 +85,42 @@ clss()
 #compressor sections
 compressor_inner_bot = make_circle(0, section_radius, offset=0)
 
-shape = (lambda u, section_radius1, section_radius2, section_height: (section_radius2 - section_radius1) * (u) / section_height )
-for i in range(sections_amount):
-	section_radius1 = section_radius * section_blade_radius_increment_ratio**(sections_amount-i)
-	section_radius2 = section_radius * section_blade_radius_increment_ratio**(sections_amount-i-1)
-	section_blades = int((section_radius*2*math.pi) / section_blade_density )
-	attach.append({"blades":section_blades})
-	attach_compressor.append({"blades":section_blades})
-	# print(section_radius1, section_radius2)
+# shape = (lambda u, section_radius1, section_radius2, section_height: (section_radius2 - section_radius1) * (u) / section_height )
+# for i in range(sections_amount):
+# 	section_radius1 = section_radius * section_blade_radius_increment_ratio**(sections_amount-i)
+# 	section_radius2 = section_radius * section_blade_radius_increment_ratio**(sections_amount-i-1)
+# 	section_blades = int((section_radius*2*math.pi) / section_blade_density )
+# 	attach.append({"blades":section_blades})
+# 	attach_compressor.append({"blades":section_blades})
+# 	# print(section_radius1, section_radius2)
 
-	for q in range(section_blades):
-		# prop = make_propeller(section_radius, section_prop_radius_outer, section_blade_thickness, int(section_height/2), section_blade_angles[0], section_blade_angles[1], q, 
-		# 	offset=section_offset + i*section_height, blades = section_blades, shape_function=[shape, section_radius1, section_radius2, section_height] )
-		# attach[i] = {**attach[i] , **prop[1] }
-		# propeller.append(prop[0])
+# 	for q in range(section_blades):
+# 		prop = make_propeller(section_radius, section_prop_radius_outer, section_blade_thickness, int(section_height/2), section_blade_angles[0], section_blade_angles[1], q, 
+# 			offset=section_offset + i*section_height, blades = section_blades, shape_function=[shape, section_radius1, section_radius2, section_height] )
+# 		attach[i] = {**attach[i] , **prop[1] }
+# 		propeller.append(prop[0])
 
-		if i != sections_amount-1:
-			stators = make_propeller(section_radius+1, compressor_radius, section_blade_thickness, int(section_height/2), section_stator_angles[0], section_stator_angles[1], q, 
-				offset=section_offset + i*section_height, blades = 1, reversed=1 
-				)
-			attach_compressor[i] = {**attach_compressor[i] , **stators[1] }
-			propeller.append(stators[0])
-
-
-	if i == sections_amount-1:
-		section_height_2 = int(section_height/2)
-
-	# cylinder, section_radius = make_cylinder( section_radius, section_height_2, offset=section_offset + i*section_height, shape_function=[shape, section_radius1, section_radius2, section_height], attachment_points = attach[i] 
-	# 	)
-	# sections.append( cylinder )
-
-	if i != sections_amount-1:
-		cylinder = make_cylinder( compressor_radius, section_height_2, offset=section_offset + i*section_height, flip=1, attachment_points = attach_compressor[i], reversed=True)
-		sections.append(cylinder)
+# 		# if i != sections_amount-1:
+# 		# 	stators = make_propeller(section_radius+1, compressor_radius, section_blade_thickness, int(section_height/2), section_stator_angles[0], section_stator_angles[1], q, 
+# 		# 		offset=section_offset + i*section_height, blades = 1, reversed=1 
+# 		# 		)
+# 		# 	attach_compressor[i] = {**attach_compressor[i] , **stators[1] }
+# 		# 	propeller.append(stators[0])
 
 
-	rod1_offset = section_offset + i*section_height + section_height_2
-	break
+# 	if i == sections_amount-1:
+# 		section_height_2 = int(section_height/2)
+
+# 	cylinder, section_radius = make_cylinder( section_radius, section_height_2, offset=section_offset + i*section_height, shape_function=[shape, section_radius1, section_radius2, section_height], attachment_points = attach[i] 
+# 		)
+# 	sections.append( cylinder )
+
+# 	# if i != sections_amount-1:
+# 	# 	cylinder = make_cylinder( compressor_radius, section_height_2, offset=section_offset + i*section_height, flip=1, attachment_points = attach_compressor[i], reversed=True)
+# 	# 	sections.append(cylinder)
+
+
+# 	rod1_offset = section_offset + i*section_height + section_height_2
 
 
 
@@ -131,12 +129,13 @@ attach.append({"blades":blades})
 for i in range(blades):
 	prop = make_propeller(cylinder_radius, blade_radius, blade_thickness, cylinder_height, blade_angles[0], blade_angles[1], i, offset=cylinder_offset , blades = blades)
 	attach[-1] = {**attach[-1] , **prop[1] }
-	# propeller.append(prop[0])
+	propeller.append(prop[0])
 
 #hyperfan
-# cylinder = make_cylinder(cylinder_radius, cylinder_height, offset=cylinder_offset, attachment_points = attach[-1])
-# cylinder_bot = make_circle(rod1_radius, cylinder_radius, offset=cylinder_offset)
-# cylinder_top = make_circle(0, cylinder_radius, offset=cylinder_height+cylinder_offset, flip=1)
+cylinder = make_cylinder(cylinder_radius, cylinder_height, offset=cylinder_offset)
+cylinder_bot = make_circle(rod1_radius, cylinder_radius, offset=cylinder_offset)
+cylinder_top = make_circle(0, 0#cylinder_radius
+	, offset=cylinder_height+cylinder_offset, flip=1)
 
 #rod
 rod = make_cylinder(rod1_radius, rod1_height, offset = rod1_offset)
@@ -156,20 +155,23 @@ compressor_tube_outer = make_cylinder(compressor_radius+compressor_thickness, co
 compressor_tube_bot = make_circle(compressor_radius, compressor_radius+compressor_thickness, offset=compressor_offset)
 compressor_tube_top = make_circle(compressor_radius, compressor_radius+compressor_thickness, offset=compressor_offset+compressor_height, flip=1)
 
+
+
+
 #starting points
-# combined = numpy.append(cylinder_bot, cylinder_top)
+combined = numpy.append(cylinder_bot, cylinder_top)
 # combined = numpy.append(duct_inner, duct_outer)
-combined = numpy.append(rod, rod_top)
+# combined = numpy.append(rod, rod_top)
 
 #compressor inner part
 for i in sections:
 	combined = numpy.append(combined, i)
-combined = numpy.append(combined, compressor_inner_bot)
+# combined = numpy.append(combined, compressor_inner_bot)
 
 #hyperfan
 for i in propeller:
 	combined = numpy.append(combined, i)
-# combined = numpy.append(combined, cylinder)
+combined = numpy.append(combined, cylinder)
 
 #rod
 # combined = numpy.append(combined, rod_top)
